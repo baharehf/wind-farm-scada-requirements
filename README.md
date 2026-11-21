@@ -70,7 +70,28 @@ a local HTTP API.
 
 All components run locally using simulated data.
 
-## 3. Technologies
+## 3. Dashboard Screenshots
+
+### Normal Operation
+
+The monitoring application displays simulated turbine
+measurements, power output, connection status, and data quality.
+
+![SCADA dashboard during normal operation](screenshots/normal-operation.png)
+
+### Modbus TCP Communication Failure
+
+When the Modbus TCP server is stopped, the application
+detects failed polling attempts and activates a
+communication-loss alarm for T-01.
+
+Unavailable measurements are displayed as N/A.
+The last valid measurements and their timestamp
+remain available for inspection.
+
+![SCADA dashboard during communication failure](screenshots/communication-failure.png)
+
+## 4. Technologies
 
 | Technology | Purpose |
 |------------|---------|
@@ -82,7 +103,7 @@ All components run locally using simulated data.
 | unittest | Automated verification |
 | Git and GitHub | Version control |
 
-## 4. Functional Requirements
+## 5. Functional Requirements
 
 | ID | Requirement |
 |----|-------------|
@@ -95,7 +116,7 @@ All components run locally using simulated data.
 Detailed requirements and acceptance criteria are
 available in the `requirements/` directory.
 
-## 5. Communication Failure Scenario
+## 6. Communication Failure Scenario
 
 The monitoring application attempts to acquire
 measurements from T-01 through Modbus TCP.
@@ -116,7 +137,7 @@ receiving measurements and clears the alarm.
 The alarm threshold is an illustrative project assumption,
 not a specification from an industrial operator.
 
-## 6. Installation
+## 7. Installation
 
 Requirements:
 
@@ -136,7 +157,7 @@ Install the dependency:
 python -m pip install "pymodbus>=3.9,<4"
 ```
 
-## 7. Run the Application
+## 8. Run the Application
 
 Start the Modbus TCP server in Terminal 1:
 
@@ -159,7 +180,7 @@ while leaving the monitoring application running.
 
 Restart the Modbus server to test recovery.
 
-## 8. Verification
+## 9. Verification
 
 Run the automated tests:
 
@@ -174,7 +195,7 @@ Some dashboard behaviour is verified manually.
 Not every functional requirement has a complete
 automated end-to-end test.
 
-## 9. Requirements Traceability
+## 10. Requirements Traceability
 
 The `requirements/` directory contains:
 
@@ -186,7 +207,7 @@ The `requirements/` directory contains:
 These documents illustrate how an operational issue
 can be translated into testable software behaviour.
 
-## 10. Limitations and Future Work
+## 11. Limitations and Future Work
 
 This is a learning prototype, not a production SCADA system.
 
