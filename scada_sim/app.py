@@ -78,6 +78,7 @@ def run_simulation():
     evaluator = AlarmEvaluator(missed_cycles_threshold=3)
     conn = open_database()
     cycle = 0
+    last_valid = {}
 
     try:
         while not stop_event.is_set():
@@ -121,6 +122,17 @@ def run_simulation():
 
                 alarm = evaluator.evaluate(reading)
 
+                # Track measurement quality and last valid reading.
+                if online:
+                    last_valid[turbine_id] = {
+                        "wind_speed": wind_speed,
+                        "power_kw": power_kw,
+                        "timestamp_utc": stamp,
+                    }
+
+                data_quality = "GOOD" if online else "COMMUNICATION_LOST"
+                last_good = last_valid.get(turbine_id)
+
                 updates[turbine_id] = {
                     "timestamp_utc": stamp,
                     "turbine_id": turbine_id,
@@ -129,6 +141,10 @@ def run_simulation():
                     "online": online,
                     "alarm": alarm,
                     "missed_cycles": evaluator.missed[turbine_id],
+                    "data_quality": data_quality,
+                    "display_wind_speed": wind_speed if online else None,
+                    "display_power_kw": power_kw if online else None,
+                    "last_valid": last_good,
                 }
 
                 # Save measurement to SQLite
