@@ -1,0 +1,6 @@
+Stakeholder_ID,Requirement_ID,Verification,Status
+STK-01,FR-01,tests/test_core.py::test_simulator_ids,Automated
+STK-01,FR-02,Manual dashboard check,Manual
+STK-02,FR-03,tests/test_core.py::test_alarm_after_three_misses,Automated
+STK-02,FR-04,tests/test_core.py::test_alarm_clears_on_recovery,Automated
+STK-03,FR-05,tests/test_storage.py::test_persistence,Automated

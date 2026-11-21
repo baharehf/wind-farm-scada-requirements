@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wind Farm SCADA — Learning Prototype</title>
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;background:#f4f6fa;color:#17243b;margin:0}
+header{background:#162b4b;color:white;padding:24px max(20px,calc((100vw - 960px)/2))}
+main{max-width:960px;margin:28px auto;padding:0 20px}
+h1{font-size:1.7rem;margin:0 0 6px}p{line-height:1.5}
+small,.muted{color:#67738a}.tag{display:inline-block;background:#e7eef9;color:#244979;padding:5px 9px;border-radius:20px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-top:20px}
+.card{background:white;border-radius:12px;padding:20px;box-shadow:0 2px 8px #19304a12;border:1px solid #e1e6ee}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.good{color:#18794e}.bad{color:#b42318}.metric{font-size:1.6rem;font-weight:700}
+</style>
+</head>
+<body>
+<header><h1>Wind Farm SCADA Monitor</h1><div>Local educational prototype — simulated turbine data</div></header>
+<main>
+<p><span class="tag">3 simulated turbines</span> &nbsp; <span class="tag">1-second reporting cycles</span></p>
+<p class="muted">A communication-loss alarm appears after three missed reporting cycles. T-02 disconnects periodically to demonstrate recovery.</p>
+<div id="cards" class="grid" aria-live="polite"><p>Connecting to local simulator...</p></div>
+<p class="muted">Last refresh: <span id="updated">—</span>. No real wind farm is connected.</p>
+</main>
+<script>
+function safe(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function refresh(){
+ try{
+  const r=await fetch('/api/turbines');if(!r.ok)throw Error('HTTP '+r.status);
+  const data=await r.json();
+  document.getElementById('cards').innerHTML=data.turbines.map(t=>`
+    <section class="card"><div class="row"><h2>${safe(t.turbine_id)}</h2><strong class="${t.alarm?'bad':'good'}">${t.alarm?'COMMUNICATION ALARM':t.online?'ONLINE':'WAITING / OFFLINE'}</strong></div>
+    <div class="muted">Wind speed</div><div class="metric">${safe(t.wind_speed)} m/s</div>
+    <div class="muted">Power (simulated)</div><div class="metric">${safe(t.power_kw)} kW</div>
+    <p class="muted">Missed cycles: ${safe(t.missed_cycles)}<br>Last reported: ${safe(t.timestamp_utc)}</p></section>`).join('');
+  document.getElementById('updated').textContent=new Date().toLocaleTimeString();
+ }catch(e){document.getElementById('cards').textContent='Unable to read simulator: '+e.message}
+}
+refresh();setInterval(refresh,1000);
+</script>
+</body></html>

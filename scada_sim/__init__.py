@@ -1,0 +1,1 @@
+"""Local SCADA learning prototype."""
