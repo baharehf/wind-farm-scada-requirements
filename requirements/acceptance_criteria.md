@@ -16,3 +16,13 @@
 5. Run `python -m unittest discover -s tests -v` and confirm tests pass.
 
 Important: these are project-level acceptance scenarios, not validated operational SCADA acceptance criteria.
+
+## Modbus TCP Acceptance Criteria
+
+| ID | Given | When | Then |
+|---|---|---|---|
+| FR-06 | The Modbus server is running | The application polls T-01 | The latest measurements are received |
+| FR-07 | T-01 is communicating normally | Three consecutive polling attempts fail | A communication-loss alarm is activated |
+| FR-08 | Modbus communication is unavailable | The dashboard refreshes | Current measurements display N/A and quality is COMMUNICATION_LOST |
+| FR-09 | A valid measurement was received | Communication is subsequently lost | The last valid measurement and timestamp remain visible |
+| FR-10 | A communication-loss alarm is active | A valid Modbus response is received | The alarm clears and data quality returns to GOOD |

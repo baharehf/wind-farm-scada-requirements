@@ -32,8 +32,17 @@ async function refresh(){
   const data=await r.json();
   document.getElementById('cards').innerHTML=data.turbines.map(t=>`
     <section class="card"><div class="row"><h2>${safe(t.turbine_id)}</h2><strong class="${t.alarm?'bad':'good'}">${t.alarm?'COMMUNICATION ALARM':t.online?'ONLINE':'WAITING / OFFLINE'}</strong></div>
-    <div class="muted">Wind speed</div><div class="metric">${safe(t.wind_speed)} m/s</div>
-    <div class="muted">Power (simulated)</div><div class="metric">${safe(t.power_kw)} kW</div>
+    <div class="muted">Wind speed</div><div class="metric">${t.display_wind_speed == null ? 'N/A' : safe(t.display_wind_speed) + ' m/s'}</div>
+    <div class="muted">Power (simulated)</div><div class="metric">${t.display_power_kw == null ? 'N/A' : safe(t.display_power_kw) + ' kW'}</div>
+    ${!t.online && t.last_valid ? `
+      <div class="muted">Last valid measurements</div>
+      <p>
+        Wind speed: ${safe(t.last_valid.wind_speed)} m/s<br>
+        Power: ${safe(t.last_valid.power_kw)} kW<br>
+        Received: ${safe(t.last_valid.timestamp_utc)}
+      </p>
+    ` : ''}
+    <p class="muted">Data quality: ${safe(t.data_quality)}</p>
     <p class="muted">Missed cycles: ${safe(t.missed_cycles)}<br>Last reported: ${safe(t.timestamp_utc)}</p></section>`).join('');
   document.getElementById('updated').textContent=new Date().toLocaleTimeString();
  }catch(e){document.getElementById('cards').textContent='Unable to read simulator: '+e.message}

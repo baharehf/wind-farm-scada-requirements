@@ -9,7 +9,8 @@ import sqlite3
 import threading
 import time
 
-from scada_sim.core import AlarmEvaluator, simulate_reading
+from scada_sim.core import Reading, AlarmEvaluator, simulate_reading
+from pymodbus.client import ModbusTcpClient
 
 ROOT = Path(__file__).resolve().parents[1]
 DB = ROOT / "data" / "measurements.sqlite3"
@@ -33,37 +34,140 @@ def open_database():
     conn.commit()
     return conn
 
+
+def read_modbus_turbine():
+    """Read T-01 measurements from the local Modbus TCP server."""
+
+    client = ModbusTcpClient(
+        "127.0.0.1",
+        port=5020,
+        timeout=1
+    )
+
+    try:
+        if not client.connect():
+            return None
+
+        response = client.read_holding_registers(
+            address=0,
+            count=3,
+            device_id=1
+        )
+
+        if response.isError():
+            return None
+
+        return {
+            "wind_speed": response.registers[0] / 10.0,
+            "power_kw": response.registers[1],
+            "online": bool(response.registers[2]),
+        }
+
+    except Exception as error:
+        print(f"Modbus communication error: {error}")
+        return None
+
+    finally:
+        client.close()
+
+
 def run_simulation():
+    """Read T-01 via Modbus and simulate the other turbines."""
+
     rng = random.Random(42)
     evaluator = AlarmEvaluator(missed_cycles_threshold=3)
     conn = open_database()
     cycle = 0
+    last_valid = {}
+
     try:
         while not stop_event.is_set():
             cycle += 1
             stamp = datetime.now(timezone.utc).isoformat()
             updates = {}
+
             for turbine_id in IDS:
-                reading = simulate_reading(turbine_id, cycle, rng)
+
+                if turbine_id == "T-01":
+                    # Read live simulated data through Modbus TCP
+                    modbus_data = read_modbus_turbine()
+
+                    if modbus_data is not None:
+                        wind_speed = modbus_data["wind_speed"]
+                        power_kw = modbus_data["power_kw"]
+                        online = modbus_data["online"]
+                    else:
+                        # Communication failed
+                        wind_speed = 0.0
+                        power_kw = 0.0
+                        online = False
+
+                else:
+                    # Keep T-02 and T-03 as Python simulations
+                    reading = simulate_reading(
+                        turbine_id, cycle, rng
+                    )
+                    wind_speed = reading.wind_speed
+                    power_kw = reading.power_kw
+                    online = reading.online
+
+                # Evaluate the communication-loss alarm
+                reading = Reading(
+                    turbine_id=turbine_id,
+                    cycle=cycle,
+                    wind_speed=wind_speed,
+                    power_kw=power_kw,
+                    online=online,
+                )
+
                 alarm = evaluator.evaluate(reading)
+
+                # Track measurement quality and last valid reading.
+                if online:
+                    last_valid[turbine_id] = {
+                        "wind_speed": wind_speed,
+                        "power_kw": power_kw,
+                        "timestamp_utc": stamp,
+                    }
+
+                data_quality = "GOOD" if online else "COMMUNICATION_LOST"
+                last_good = last_valid.get(turbine_id)
+
                 updates[turbine_id] = {
                     "timestamp_utc": stamp,
                     "turbine_id": turbine_id,
-                    "wind_speed": reading.wind_speed,
-                    "power_kw": reading.power_kw,
-                    "online": reading.online,
+                    "wind_speed": wind_speed,
+                    "power_kw": power_kw,
+                    "online": online,
                     "alarm": alarm,
                     "missed_cycles": evaluator.missed[turbine_id],
+                    "data_quality": data_quality,
+                    "display_wind_speed": wind_speed if online else None,
+                    "display_power_kw": power_kw if online else None,
+                    "last_valid": last_good,
                 }
+
+                # Save measurement to SQLite
                 conn.execute(
                     "INSERT INTO measurements VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (stamp, turbine_id, cycle, reading.wind_speed,
-                     reading.power_kw, int(reading.online), int(alarm)),
+                    (
+                        stamp,
+                        turbine_id,
+                        cycle,
+                        wind_speed,
+                        power_kw,
+                        int(online),
+                        int(alarm),
+                    ),
                 )
+
             conn.commit()
+
             with state_lock:
                 latest.update(updates)
+
             stop_event.wait(1)
+
     finally:
         conn.close()
 

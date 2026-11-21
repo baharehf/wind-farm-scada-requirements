@@ -18,3 +18,40 @@ This demonstration uses one-second reporting cycles and declares a communication
 
 ## Change-control example
 If a stakeholder requests a 10-second threshold instead of three reporting cycles, update the approved requirement, implementation, acceptance tests and traceability matrix together.
+
+## Modbus TCP Communication Requirements
+
+### FR-06 — Modbus Data Acquisition
+
+The monitoring application shall read wind speed,
+power output, and turbine status from the simulated
+T-01 Modbus TCP server once per polling cycle.
+
+### FR-07 — Communication Loss Detection
+
+The monitoring application shall activate a
+communication-loss alarm after three consecutive
+unsuccessful Modbus polling attempts.
+
+### FR-08 — Data Quality Indication
+
+When communication with T-01 is lost, the
+application shall mark the current measurement
+quality as COMMUNICATION_LOST.
+
+The dashboard shall display N/A instead of
+presenting unavailable measurements as zero.
+
+### FR-09 — Last Valid Measurement
+
+The application shall retain the last successfully
+received measurements and their timestamp.
+
+During communication loss, the dashboard shall
+display these values separately from current data.
+
+### FR-10 — Communication Recovery
+
+The application shall clear the communication-loss
+alarm and restore data quality to GOOD after
+successful communication is re-established.

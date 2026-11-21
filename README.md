@@ -1,64 +1,238 @@
-# Wind Farm SCADA Requirements & Monitoring — Learning Prototype
 
-A small, **local, simulated** wind-farm monitoring application intended to demonstrate requirements engineering and basic software verification. It does **not** connect to real turbines or Nordex systems.
+# Wind Farm SCADA Monitoring and Requirements Engineering
 
-## What it does
-- Simulates three wind turbines, each reporting wind speed, power output and communication status.
-- Writes time-stamped measurements to a local SQLite database.
-- Detects a communication failure when a turbine misses three simulated reporting cycles.
-- Displays the latest values and current alarms in a browser.
-- Includes functional requirements, acceptance criteria, a traceability matrix and automated tests.
+A Python-based educational prototype demonstrating
+industrial data acquisition, communication monitoring,
+alarm handling, and requirements traceability in a
+simulated wind farm environment.
 
-## Run (Python 3.10+; no packages to install)
+This project was developed as a practical exercise in
+SCADA systems and requirements engineering.
+
+## 1. Project Objectives
+
+The project demonstrates how operational monitoring
+needs can be translated into functional requirements,
+implemented in software, and verified through testing.
+
+The main objectives are:
+
+- Acquire simulated turbine measurements using Modbus TCP.
+- Monitor wind speed, power output, and connection status.
+- Detect communication failures and generate alarms.
+- Distinguish unavailable measurements from valid zero values.
+- Preserve the last valid measurement during communication loss.
+- Document functional requirements and acceptance criteria.
+- Verify system behaviour through automated and manual tests.
+
+## 2. System Architecture
+
+The application contains three simulated turbines:
+
+- T-01: Measurements acquired through Modbus TCP.
+- T-02: Python-based simulation with periodic communication failures.
+- T-03: Python-based simulation.
+
+The monitoring application stores measurement records
+in SQLite and makes the latest state available through
+a local HTTP API.
+
+```text
+    Simulated Turbine T-01
+              |
+              v
+       Modbus TCP Server
+       127.0.0.1:5020
+              |
+              v
+       Modbus TCP Client
+              |
+              |
+    T-02 -----+----- T-03
+              |
+              v
+      SCADA Monitoring App
+              |
+        +-----+-----+
+        |           |
+        v           v
+      SQLite     Alarm Logic
+        |           |
+        +-----+-----+
+              |
+              v
+          HTTP API
+              |
+              v
+        Web Dashboard
+       127.0.0.1:8000
+```
+
+All components run locally using simulated data.
+
+## 3. Dashboard Screenshots
+
+### Normal Operation
+
+The monitoring application displays simulated turbine
+measurements, power output, connection status, and data quality.
+
+![SCADA dashboard during normal operation](screenshots/normal-operation.png)
+
+### Modbus TCP Communication Failure
+
+When the Modbus TCP server is stopped, the application
+detects failed polling attempts and activates a
+communication-loss alarm for T-01.
+
+Unavailable measurements are displayed as N/A.
+The last valid measurements and their timestamp
+remain available for inspection.
+
+![SCADA dashboard during communication failure](screenshots/communication-failure.png)
+
+## 4. Technologies
+
+| Technology | Purpose |
+|------------|---------|
+| Python | Simulation and monitoring logic |
+| PyModbus 3.x | Modbus TCP communication |
+| SQLite | Measurement storage |
+| HTML, CSS, JavaScript | Monitoring dashboard |
+| HTTP / JSON | Dashboard data access |
+| unittest | Automated verification |
+| Git and GitHub | Version control |
+
+## 5. Functional Requirements
+
+| ID | Requirement |
+|----|-------------|
+| FR-06 | Acquire turbine measurements through Modbus TCP |
+| FR-07 | Detect communication loss after three unsuccessful polling cycles |
+| FR-08 | Indicate unavailable measurement quality |
+| FR-09 | Preserve the last valid measurement |
+| FR-10 | Clear the alarm after communication recovery |
+
+Detailed requirements and acceptance criteria are
+available in the `requirements/` directory.
+
+## 6. Communication Failure Scenario
+
+The monitoring application attempts to acquire
+measurements from T-01 through Modbus TCP.
+
+When the Modbus server becomes unavailable:
+
+1. The application detects unsuccessful polling attempts.
+2. After three consecutive failures, a communication-loss
+   alarm is activated.
+3. Current unavailable values are displayed as N/A.
+4. Previously received valid measurements remain visible
+   with their timestamp.
+5. The other simulated turbines continue operating.
+
+When communication is restored, the application resumes
+receiving measurements and clears the alarm.
+
+The alarm threshold is an illustrative project assumption,
+not a specification from an industrial operator.
+
+## 7. Installation
+
+Requirements:
+
+- Python 3.10 or newer
+- PyModbus 3.x
+
+Create a virtual environment:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Install the dependency:
+
+```bash
+python -m pip install "pymodbus>=3.9,<4"
+```
+
+## 8. Run the Application
+
+Start the Modbus TCP server in Terminal 1:
+
+```bash
+python -m scada_sim.modbus_server
+```
+
+Start the monitoring application in Terminal 2:
 
 ```bash
 python -m scada_sim.app
 ```
 
-Open http://127.0.0.1:8000 in your browser. Press Ctrl+C to stop.
+Open the dashboard:
 
-The simulation deliberately disconnects turbine **T-02** periodically to exercise the alarm flow.
+http://127.0.0.1:8000
 
-## Run automated tests
+To test communication loss, stop the Modbus server
+while leaving the monitoring application running.
+
+Restart the Modbus server to test recovery.
+
+## 9. Verification
+
+Run the automated tests:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-## Requirements engineering demonstration
-See:
-- [`requirements/stakeholder_requirements.md`](requirements/stakeholder_requirements.md)
-- [`requirements/functional_specification.md`](requirements/functional_specification.md)
-- [`requirements/acceptance_criteria.md`](requirements/acceptance_criteria.md)
-- [`requirements/traceability_matrix.csv`](requirements/traceability_matrix.csv)
+The tests cover turbine simulation, alarm logic,
+Modbus client responses, and database persistence.
 
-## System design
+Some dashboard behaviour is verified manually.
+Not every functional requirement has a complete
+automated end-to-end test.
 
-```text
-Local simulated turbine readings
-             |
-             v
-        Alarm evaluator
-             |
-             v
-     SQLite measurement log
-             |
-             v
-    Local HTTP dashboard
-```
+## 10. Requirements Traceability
 
-## Scope and limitations
-- Educational demonstration, not safety-certified SCADA software.
-- Simulated signals only. No industrial device interfaces or external network connectivity.
-- Local HTTP server binds to **127.0.0.1**, not the public internet.
-- Alarm threshold is a project assumption, not a Nordex operating requirement.
-- OPC UA, Modbus TCP, user roles and cyber-security hardening are **planned extensions**, not implemented features.
+The `requirements/` directory contains:
 
-## Suggested next extensions
-1. Add a Modbus TCP simulator and client; document register mapping and failure behaviour.
-2. Add a requirement review/change history and stronger traceability to tests.
-3. Add historical charts and filtering by turbine.
-4. Add a CI test workflow and incident reports.
+- Stakeholder requirements
+- Functional specifications
+- Acceptance criteria
+- Requirements traceability matrix
 
-## CV description (only after running and understanding the work)
-*Developed a local Python prototype of a simulated wind-farm monitoring workflow with SQLite storage, communication-failure alarms, acceptance criteria, traceability documentation and unit tests.*
+These documents illustrate how an operational issue
+can be translated into testable software behaviour.
+
+## 11. Limitations and Future Work
+
+This is a learning prototype, not a production SCADA system.
+
+Current limitations include:
+
+- Simulated turbine measurements only.
+- No connection to real wind turbines.
+- No industrial safety certification.
+- No OPC UA implementation.
+- No authentication or role-based access control.
+- Last valid measurements are retained in application
+  memory and are not restored after a restart.
+
+Potential extensions:
+
+- OPC UA data acquisition.
+- Historical measurement visualization.
+- Persistent alarm and incident history.
+- Automated end-to-end communication testing.
+- Improved measurement quality and timestamp handling.
+
+## Disclaimer
+
+This is an independent educational project.
+
+It is not affiliated with, endorsed by, or connected
+to Nordex SE, and it does not use proprietary
+wind turbine software or operational data.
